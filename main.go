@@ -15,10 +15,17 @@ var (
 	addr       = flag.String("addr", ":8080", "The address to bind to")
 	statsdAddr = flag.String("statsd", "192.168.60.106:8125", "The statsd server address to connect to")
 	brokers    = flag.String("brokers", "0.0.0.0:9092", "The Kafka brokers to connect to, as a comma separated list")
+	verbose    = flag.Bool("verbose", false, "Print out logging information for debugging purposes.")
 )
 
-// HandleClick it handles clicks
-func HandleClick(w http.ResponseWriter, r *http.Request) {
+// Server server
+type Server struct {
+	producer sarama.SyncProducer
+	statsd   statsd.Statter
+}
+
+// Run run server
+func (s *Server) Run() {
 	brokerList := strings.Split(*brokers, ",")
 
 	// For the data collector, we are looking for strong consistency semantics.
@@ -38,7 +45,23 @@ func HandleClick(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Fatalln("Failed to start Sarama producer:", err)
 	}
+	s.producer = producer
 
+	// first create a client
+	// The basic client sends one stat per packet (for compatibility).
+	statsd, err := statsd.NewClient(*statsdAddr, "kafka")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer statsd.Close()
+	s.statsd = statsd
+
+	http.HandleFunc("/", s.HandleClick)
+	http.ListenAndServe(*addr, nil)
+}
+
+// HandleClick it handles clicks
+func (s *Server) HandleClick(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
@@ -46,38 +69,28 @@ func HandleClick(w http.ResponseWriter, r *http.Request) {
 
 	// We are not setting a message key, which means that all messages will
 	// be distributed randomly over the different partitions.
-	partition, offset, err := producer.SendMessage(&sarama.ProducerMessage{
+	partition, offset, err := s.producer.SendMessage(&sarama.ProducerMessage{
 		Topic: "transactions",
 		Value: sarama.StringEncoder(r.URL.RawQuery),
 	})
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Failed to store your data:, %s\n", err)
-		fmt.Printf("Failed to store your data:, %s\n", err)
+		if *verbose {
+			fmt.Fprintf(w, "Failed to store your data:, %s\n", err)
+			fmt.Printf("Failed to store your data:, %s\n", err)
+		}
 	} else {
-		// The tuple (topic, partition, offset) can be used as a unique identifier
-		// for a message in a Kafka cluster.
-		fmt.Fprintf(w, "Your data is stored with unique identifier important/%d/%d\n", partition, offset)
-		fmt.Printf("Your data is stored with unique identifier important/%d/%d\n", partition, offset)
-
+		if *verbose {
+			fmt.Fprintf(w, "Your data is stored with unique identifier: partition=%d, offset=%d\n", partition, offset)
+			fmt.Printf("Your data is stored with unique identifier: partition=%d, offset=%d\n", partition, offset)
+		}
+		s.statsd.Inc("transaction_count", 1, 1)
 	}
-}
-
-func incrementMetrics() {
-	// first create a client
-	// The basic client sends one stat per packet (for compatibility).
-	client, err := statsd.NewClient(*statsdAddr, "kafka-client")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer client.Close()
-
-	client.Inc("kafka_count", 1, 1.0)
 }
 
 func main() {
 	flag.Parse()
-	http.HandleFunc("/", HandleClick)
-	http.ListenAndServe(*addr, nil)
+	server := &Server{}
+	server.Run()
 }
