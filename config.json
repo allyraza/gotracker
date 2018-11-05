@@ -1,0 +1,8 @@
+{
+  "addr": "localhost:3000",
+  "stats": "localhost:2000",
+  "broker": "kafka",
+  "kafka": {
+    "brokers": ["localhost:9292"]
+  }
+}

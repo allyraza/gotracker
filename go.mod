@@ -1,8 +1,8 @@
 module github.com/allyraza/gotracker
 
 require (
-	github.com/Shopify/sarama v1.19.0 // indirect
-	github.com/cactus/go-statsd-client/statsd v0.0.0-20180911231738-23713bd9ff66 // indirect
+	github.com/Shopify/sarama v1.19.0
+	github.com/cactus/go-statsd-client/statsd v0.0.0-20180911231738-23713bd9ff66
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/eapache/go-resiliency v1.1.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
