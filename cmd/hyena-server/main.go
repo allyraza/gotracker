@@ -30,16 +30,16 @@ func main() {
 		worker.Start()
 	}()
 
-	s := http.Server{Addr: config.Addr, Handler: collector}
+	server := http.Server{Addr: config.Addr, Handler: collector}
 	go func() {
-		log.Fatal(s.ListenAndServe())
+		log.Fatal(server.ListenAndServe())
 	}()
 
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
-	<-signalChan
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	<-signals
 
 	log.Println("Shutdown signal received, exiting...")
 
-	s.Shutdown(context.Background())
+	server.Shutdown(context.Background())
 }
