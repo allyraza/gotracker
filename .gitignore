@@ -1,3 +1,4 @@
-hyena-server
-hyena-cli
-vendor
+hyena-server*
+hyena-cli*
+
+!cmd

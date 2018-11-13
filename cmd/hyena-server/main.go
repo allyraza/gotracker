@@ -40,6 +40,5 @@ func main() {
 	<-signals
 
 	log.Println("Shutdown signal received, exiting...")
-
 	server.Shutdown(context.Background())
 }
