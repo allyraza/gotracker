@@ -1,0 +1,15 @@
+{
+  "addr": "localhost:3000",
+  "stats": {
+    "addr": "localhost:2000",
+    "key": "hyena"
+  },
+  "broker": "kafka",
+  "logfile": "hyena.log",
+  "buffer": {
+    "size": 100
+  },
+  "kafka": {
+    "brokers": ["localhost:9292"]
+  }
+}
